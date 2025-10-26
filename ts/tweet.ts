@@ -20,6 +20,8 @@ class Tweet {
         }
 
         if (
+            s.includes("with @runkeeper live") ||
+            s.includes("#rklive") ||
             s.includes("watch my run right now") ||
             ((s.startsWith("i'm") || s.startsWith("im ")) && s.includes(" with @runkeeper")) ||
             (s.startsWith("just posted a ") && s.includes(" with @runkeeper"))
@@ -27,6 +29,7 @@ class Tweet {
             return "live_event";
         }
 
+        // achievements/goals
         if (
             s.includes("personal record") ||
             s.startsWith("achieved ") ||
@@ -44,6 +47,7 @@ class Tweet {
         const strip = (txt: string) => {
             let t = txt.replace(/https?:\/\/\S+/gi, "");
             t = t.replace(/#runkeeper/gi, "");
+            t = t.replace(/#rklive/gi, "");
             return t.replace(/\s+/g, " ").trim();
         };
 
@@ -51,17 +55,19 @@ class Tweet {
         if (!s) return false;
 
         const boilerplate = [
-            /^just completed .+ with @runkeeper\.?$/,
-            /^i'?m .+ with @runkeeper\.?$/,
-            /^just posted a. + with @runkeeper\.?$/,
-            /^achieved .+ with @runkeeper\.?$/,
-            /^i just set a goal.*$/
+            /^just completed .+ with @runkeeper\.?$/i,
+            /^i'?m .+ with @runkeeper\.?$/i,
+            /^just posted a. + with @runkeeper\.?$/i,
+            /^achieved .+ with @runkeeper\.?$/i,
+            /^i just set a goal.*$/i
         ];
         const isBoilerOnly = boilerplate.some((p) => p.test(s));
 
-        const hasExtraSignals = /-|-|:|;|!|\?| feeling | splits | pace | weather /.test(s);
+        const hasDashNote = /\s-\s/.test(s);
+        const hasExtraPunct = /[!:?]/.test(s);
+        const hasKeywords = /(tired|weather|pb|pr|pace|splits|wind|rain|hot|cold|hill|hills)/i.test(s);
 
-        return !isBoilerOnly || hasExtraSignals;
+        return !isBoilerOnly || hasDashNote || hasExtraPunct || hasKeywords;
     }
 
     get writtenText():string {
@@ -71,16 +77,20 @@ class Tweet {
         const strip = (txt: string) => {
             let t = txt.replace(/https?:\/\/\S+/gi, "");
             t = t.replace(/#runkeeper/gi, "");
+            t = t.replace(/#rklive/gi, "");
             return t.replace(/\s+/g, " ").trim();
         };
 
         let out = strip(this.text);
 
-        out = out.replace(/^just completed .*? ( with @runkeeper)?\.?\s*/i, "");
+        out = out.replace(/^just completed .*?( with @runkeeper\.?( check it out!)?)?\s*/i, "");
         out = out.replace(/^i'?m .*? with @runkeeper\.?\s*/i, "");
         out = out.replace(/^just posted a .*? with @runkeeper\.?\s*/i, "");
         out = out.replace(/^achieved .*? with @runkeeper\.?\s*/i, "");
         out = out.replace(/^i just set a goal.*?\s*/i, "");
+
+        const dash = strip(this.text).match(/\s-\s(.+)$/);
+        if (dash && dash[1]) return dash[1].trim();
 
         return out.trim();
     }
@@ -93,11 +103,11 @@ class Tweet {
         const s = this.text.toLowerCase();
 
         const m = s.match(/\b(?:mi|mile|miles|km|kilometer|kilometers)\b\s+([a-z]+)/);
-        let type = m?.[1] || "";
+        let type = (m?.[1] || "").trim();
 
         if (!type) {
             const common = ["run", "walk", "hike", "bike", "ride", "cycling", "swim", "ski", "elliptical", "row", "treadmill"];
-            type = common.find((w) => s.includes(' ${w} ')) || "";
+            type = common.find((w) => s.includes(` ${w} `)) || "";
         }
 
         if (!type) return "unknown";
@@ -110,12 +120,26 @@ class Tweet {
         if(this.source != 'completed_event') {
             return 0;
         }
-        //TODO: prase the distance from the text of the tweet
-        return 0;
+
+        const s = this.text.toLowerCase();
+        const m = s.match(/([\d]+(?:\.\d+)?)\s*(mi|mile|miles|km|kilometer|kilometers)\b/);
+        if (!m) return 0;
+
+        const val = parseFloat(m[1]);
+        const unit = m[2];
+        if (isNaN(val)) return 0;
+
+        return /km|kilometer/.test(unit) ? val / 1.609 : val;
     }
 
     getHTMLTableRow(rowNumber:number):string {
-        //TODO: return a table row which summarizes the tweet with a clickable link to the RunKeeper activity
-        return "<tr></tr>";
+        const linkified = this.text.replace(
+            /(https?:\/\/[^\s]+)/g,
+            (u) => `<a href="${u}" target ="_blank" rel="noopener">${u}</a>`
+        );
+        const when = this.time.toLocaleString();
+        const type = this.source === "completed_event" ? (this.activityType || "-") : "-";
+
+        return `<tr><td>${rowNumber}</td><td>${type}</td><td>${when}</td><td>${linkified}</td></tr>`.trim();
     }
 }
