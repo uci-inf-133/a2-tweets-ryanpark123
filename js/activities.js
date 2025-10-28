@@ -35,11 +35,13 @@ function parseTweets(runkeeper_tweets) {
 	const activity_vis_spec = {
 	  $schema: "https://vega.github.io/schema/vega-lite/v5.json",
 	  description: "A graph of the number of Tweets containing each type of activity.",
+	  width: 500,
+	  height: 220,
 	  data: {
-	    "values": freq
+	    values: freq
 	  },
 	  mark: "bar",
-	  endocing: {
+	  encoding: {
 		x: { field: "activity", type: "nominal", sort: "-y", title: "Activity" },
 		y: { field: "count", type: "quantitative", title: "Count"},
 		tooltip: [{ field: "activity" }, { field: "count", type: "quantitative"}]
@@ -67,10 +69,10 @@ function parseTweets(runkeeper_tweets) {
 	  },
 	  mark: "point",
 	  encoding: {
-		x: { field: "day", type: "ordinal", title: "Day of Week", sort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] },
-		y: { field: "distance", type: "quantitative", title: "Distance (mi" },
+		x: { field: "day", type: "ordinal", title: "Day of Week", sort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], axis: { grid: true } },
+		y: { field: "distance", type: "quantitative", title: "Distance (mi)" },
 		color: { field: "activity", type: "nominal" },
-		tooltip: ["activity", "day", {field: "distance", "type": "quantitative", "format": ".2f"}]
+		tooltip: ["activity", "day", {field: "distance", type: "quantitative", format: ".2f"}]
 	  }
 	};
 	vegaEmbed('#distanceVis', rawSpec, {actions:false});
@@ -82,14 +84,12 @@ function parseTweets(runkeeper_tweets) {
 		data: {
 			values: rows
 		},
-		mark: "bar",
+		mark: "point",
 		encoding: {
-			x: { field: "day", type: "ordinal", title: "Day of Week", sort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] },
+			x: { field: "day", type: "ordinal", title: "Day of Week", sort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], axis: { grid: true } },
 			y: { aggregate: "mean", field: "distance", type: "quantitative", title: "Mean Distance (mi)" },
 			color: { field: "activity", type: "nominal" },
-			tooltip: [
-				"activity", "day", {aggregate: "mean", field: "distance", type: "quantitative", format: ".2f", title: "Mean distance"}
-			]
+			tooltip: ["activity", "day", {aggregate: "mean", field: "distance", type: "quantitative", format: ".2f", title: "Mean distance"}]
 		}
 	};
 	vegaEmbed('#distanceVisAggregated', meanSpec, {actions: false});
@@ -102,9 +102,9 @@ function parseTweets(runkeeper_tweets) {
 			const rawVisible = getComputedStyle(document.querySelector('#distanceVis')).display !== 'none';
 			if (rawVisible) {
 				hide('#distanceVis'); show('#distanceVisAggregated');
-				btn.textContent = 'Show raw';
+				btn.textContent = 'Show activities';
 			} else {
-				show('#distanceVis'); show('distanceVisAggregated');
+				show('#distanceVis'); hide('#distanceVisAggregated');
 				btn.textContent = 'Show means';
 			}
 		};
@@ -123,8 +123,8 @@ function parseTweets(runkeeper_tweets) {
 
 	const longest = means[0]?.activity || '-';
 	const shortest = means[means.length - 1]?.activity || '-';
-	setText('longestActivity', longest);
-	setText('shortestActivity', shortest);
+	setText('longestActivityType', longest);
+	setText('shortestActivityType', shortest);
 	
 	const wkday = rows.filter(r => !r.isWeekend).map(r => r.distance);
 	const wkend = rows.filter(r => r.isWeekend).map(r => r.distance);
