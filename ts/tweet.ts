@@ -39,6 +39,10 @@ class Tweet {
             return "achievement";
         }
 
+        if (/^just posted a\s+\d+(?:\.\d+)?\s*(mi|mile|miles|km|kilometer|kilometers)\b/i.test(s)) {
+            return "completed_event";
+        }
+
         return "miscellaneous";
     }
 
@@ -104,6 +108,12 @@ class Tweet {
 
         const m = s.match(/\b(?:mi|mile|miles|km|kilometer|kilometers)\b\s+([a-z]+)/);
         let type = (m?.[1] || "").trim();
+
+        if (!type) {
+        // catch phrases like "10 mi elliptical workout" or "5 km bike ride"
+            const m2 = s.match(/\b\d+(?:\.\d+)?\s*(?:mi|mile|miles|km|kilometers?)\b.*?\b(run|walk|hike|bike|ride|cycling|elliptical|swim|ski|row|treadmill)\b/);
+            if (m2) type = m2[1];
+        }
 
         if (!type) {
             const common = ["run", "walk", "hike", "bike", "ride", "cycling", "swim", "ski", "elliptical", "row", "treadmill"];
